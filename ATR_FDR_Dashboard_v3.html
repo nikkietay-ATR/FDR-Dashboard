@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATR — FDR Shift Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#AACD61; --green-dark:#8fb048; --green-bg:#f3f9e8;
+  --teal:#4B929B; --teal-bg:#eef6f7;
+  --grey:#515252; --grey-light:#6b6b6b;
+  --melon:#E0694A; --melon-bg:#fef0eb;
+  --yellow:#F6CD61; --yellow-bg:#fef9e7;
+  --muttro:#4B618C; --muttro-bg:#eef0f7;
+  --bg:#F5F4F0; --card:#fff; --border:#e2e0db;
+  --text:#2a2a2a; --text-light:#6b6b6b;
+  --radius:10px; --shadow:0 2px 8px rgba(0,0,0,0.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+
+/* LOGIN */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--grey);}
+.login-card{background:white;border-radius:16px;padding:48px 40px;width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
+.login-logo{width:60px;height:60px;background:var(--green);border-radius:14px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.login-card h1{font-size:20px;font-weight:600;margin-bottom:4px;}
+.login-card p{color:var(--text-light);font-size:13px;margin-bottom:24px;}
+.login-select,.login-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:14px;background:white;margin-bottom:10px;transition:border-color 0.2s;}
+.login-select:focus,.login-input:focus{outline:none;border-color:var(--teal);}
+.login-btn{width:100%;padding:13px;background:var(--green);border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#2a2a2a;cursor:pointer;transition:background 0.2s;}
+.login-btn:hover{background:var(--green-dark);}
+.login-err{color:var(--melon);font-size:13px;margin-bottom:10px;display:none;}
+.login-divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+/* APP */
+#app{display:none;}
+.header{background:var(--grey);color:white;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-logo{width:30px;height:30px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.header h1{font-size:15px;font-weight:600;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.header-date{font-size:12px;color:rgba(255,255,255,0.55);font-family:'DM Mono',monospace;}
+.user-badge{background:rgba(255,255,255,0.1);border-radius:20px;padding:5px 12px;font-size:13px;display:flex;align-items:center;gap:6px;}
+.role-chip{font-size:10px;background:var(--green);color:#2a2a2a;padding:1px 7px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,0.2);color:white;padding:5px 12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:background 0.2s;}
+.logout-btn:hover{background:rgba(255,255,255,0.1);}
+
+/* NOTIF */
+.notif{position:fixed;top:64px;right:20px;background:var(--grey);color:white;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.2);}
+
+/* NAV TABS (main sections) */
+.nav-tabs{background:white;border-bottom:1px solid var(--border);display:flex;gap:0;padding:0 20px;position:sticky;top:56px;z-index:150;}
+.nav-tab{padding:12px 18px;font-size:13px;font-weight:600;color:var(--text-light);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.nav-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.nav-tab:hover{color:var(--teal);}
+
+/* SECTIONS */
+.section{display:none;max-width:1280px;margin:0 auto;padding:20px;}
+.section.active{display:block;}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.col-full{grid-column:1/-1;}
+@media(max-width:800px){.grid-2{grid-template-columns:1fr;}.col-full{grid-column:1;}}
+
+/* CARDS */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+.card-header{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
+.card-title{font-size:11px;font-weight:700;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-light);flex-shrink:0;}
+.card-title .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.card-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.card-body{padding:16px 18px;}
+
+/* BUTTONS */
+.btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;border-radius:7px;padding:7px 14px;cursor:pointer;border:none;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn-primary{background:var(--teal);color:white;}
+.btn-primary:hover{background:#3d7a82;}
+.btn-green{background:var(--green);color:#2a2a2a;}
+.btn-green:hover{background:var(--green-dark);}
+.btn-ghost{background:none;border:1.5px solid var(--border);color:var(--text-light);}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
+.btn-melon{background:var(--melon);color:white;}
+.btn-melon:hover{background:#c55a3d;}
+.btn-danger{background:none;border:none;color:var(--border);font-size:15px;cursor:pointer;padding:2px 4px;line-height:1;transition:color 0.15s;}
+.btn-danger:hover{color:var(--melon);}
+
+/* FORMS */
+.f-input,.f-select,.f-textarea{font-family:'DM Sans',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);background:white;transition:border-color 0.2s;}
+.f-input:focus,.f-select:focus,.f-textarea:focus{outline:none;border-color:var(--teal);}
+.f-textarea{width:100%;resize:vertical;min-height:60px;}
+.f-input{flex:1;min-width:80px;}
+.f-select{cursor:pointer;}
+.form-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;}
+.form-row:last-child{margin-bottom:0;}
+.form-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-light);white-space:nowrap;}
+.form-panel{padding:14px 18px;background:#fafaf8;border-top:1px solid var(--border);}
+
+/* BADGE */
+.badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:2px 8px;border-radius:4px;flex-shrink:0;}
+.badge-important{background:var(--melon-bg);color:var(--melon);}
+.badge-info{background:var(--teal-bg);color:var(--teal);}
+.count-badge{background:var(--melon);color:white;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;}
+
+/* EMPTY */
+.empty{text-align:center;padding:28px 16px;color:var(--text-light);font-size:13px;}
+.empty .icon{font-size:26px;margin-bottom:6px;}
+
+/* UPDATES */
+.update-item{padding:12px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;}
+.update-item:last-child{border-bottom:none;}
+.unread-dot{width:7px;height:7px;background:var(--melon);border-radius:50%;flex-shrink:0;margin-top:5px;}
+.unread-dot.seen{background:transparent;}
+.update-content{flex:1;min-width:0;}
+.update-text{font-size:13px;line-height:1.5;word-break:break-word;white-space:pre-wrap;}
+.update-meta{display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.update-author{font-size:11px;color:var(--text-light);font-family:'DM Mono',monospace;}
+.update-time{font-size:11px;color:var(--text-light);}
+.read-btn{flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text-light);cursor:pointer;transition:all 0.15s;}
+.read-btn:hover{background:var(--green-bg);border-color:var(--green);color:var(--green-dark);}
+.read-btn.done{background:var(--green-bg);border-color:var(--green);color:var(--green-dark);}
+
+/* DOGS */
+.dogs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;}
+.dog-card{border:1.5px solid var(--border);border-radius:8px;padding:12px;position:relative;transition:border-color 0.2s;}
+.dog-card:hover{border-color:var(--teal);}
+.dog-name{font-weight:600;font-size:13px;margin-bottom:2px;padding-right:20px;}
+.dog-tier{font-size:10px;font-family:'DM Mono',monospace;color:var(--text-light);margin-bottom:8px;}
+.dog-reqs{display:flex;flex-wrap:wrap;gap:4px;}
+.req-tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;}
+.req-green{background:var(--green-bg);color:var(--green-dark);}
+.req-orange{background:var(--melon-bg);color:var(--melon);}
+.req-purple{background:var(--muttro-bg);color:var(--muttro);}
+.dog-del{position:absolute;top:7px;right:7px;background:none;border:none;color:var(--border);cursor:pointer;font-size:15px;line-height:1;transition:color 0.15s;}
+.dog-del:hover{color:var(--melon);}
+
+/* APPTS */
+.appt-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;transition:border-color 0.2s;margin-bottom:8px;}
+.appt-item:last-child{margin-bottom:0;}
+.appt-item:hover{border-color:var(--teal);}
+.appt-time{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--teal);min-width:52px;}
+.appt-info{flex:1;min-width:0;}
+.appt-dog{font-weight:600;font-size:13px;}
+.appt-adopter{font-size:11px;color:var(--text-light);}
+.appt-handler{font-size:11px;background:var(--green-bg);color:var(--green-dark);padding:3px 9px;border-radius:10px;font-weight:500;white-space:nowrap;}
+
+/* CHECKLIST */
+.cl-tabs{display:flex;border-bottom:1px solid var(--border);}
+.cl-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--text-light);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.15s;}
+.cl-tab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.progress-wrap{padding:10px 18px 4px;}
+.progress-label{font-size:11px;color:var(--text-light);display:flex;justify-content:space-between;margin-bottom:5px;}
+.progress-bg{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width 0.35s ease;}
+.cl-body{padding:10px 18px 6px;}
+.cl-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-light);margin:12px 0 6px;display:flex;align-items:center;gap:6px;}
+.cl-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.cl-item:last-child{border-bottom:none;}
+.cl-check{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;background:white;user-select:none;}
+.cl-check:hover{border-color:var(--green);}
+.cl-check.checked{background:var(--green);border-color:var(--green);}
+.cl-check.checked::after{content:'✓';font-size:12px;font-weight:800;color:white;}
+.cl-label{flex:1;font-size:13px;cursor:pointer;user-select:none;line-height:1.4;}
+.cl-label.done{color:var(--text-light);text-decoration:line-through;}
+.cl-who{font-size:10px;font-family:'DM Mono',monospace;color:var(--text-light);background:var(--bg);padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;}
+.cl-assigned-chip{font-size:10px;background:var(--muttro-bg);color:var(--muttro);padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0;}
+.add-task-row{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.add-task-input{flex:1;font-family:'DM Sans',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:7px;padding:8px 11px;transition:border-color 0.2s;}
+.add-task-input:focus{outline:none;border-color:var(--teal);}
+.reset-note{font-size:11px;color:var(--text-light);font-style:italic;text-align:right;padding:4px 18px 12px;}
+
+/* REPORTS */
+.report-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;padding:16px;background:white;border-radius:var(--radius);box-shadow:var(--shadow);}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:white;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);text-align:center;}
+.stat-num{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
+.stat-label{font-size:11px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;}
+.report-table{width:100%;border-collapse:collapse;font-size:13px;}
+.report-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);background:#fafaf8;border-bottom:2px solid var(--border);}
+.report-table td{padding:9px 12px;border-bottom:1px solid var(--border);}
+.report-table tr:last-child td{border-bottom:none;}
+.report-table tr:hover td{background:#fafaf8;}
+.pct-bar-wrap{display:flex;align-items:center;gap:8px;}
+.pct-bar-bg{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:60px;}
+.pct-bar-fill{height:100%;border-radius:3px;transition:width 0.3s;}
+.pct-label{font-size:11px;font-family:'DM Mono',monospace;color:var(--text-light);min-width:30px;text-align:right;}
+.good{color:var(--green-dark);}
+.warn{color:var(--yellow);}
+.bad{color:var(--melon);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🐾</div>
+    <h1>ATR Front Desk</h1>
+    <p>Select your name and enter your PIN to begin</p>
+    <div class="login-err" id="login-err">Incorrect PIN — try again.</div>
+    <select class="login-select" id="login-sel">
+      <option value="">— Who's starting their shift? —</option>
+      <optgroup label="FDR Team">
+        <option value="Maya|fdr">Maya</option>
+        <option value="Kelyn|fdr">Kelyn</option>
+        <option value="Natalie|fdr">Natalie</option>
+        <option value="Caitlin|fdr">Caitlin</option>
+        <option value="Kyle|fdr">Kyle</option>
+        <option value="Kadi|fdr">Kadi</option>
+        <option value="Courtney|fdr">Courtney</option>
+        <option value="Serena|fdr">Serena</option>
+      </optgroup>
+      <optgroup label="Leadership">
+        <option value="Sadie|supervisor">Sadie</option>
+        <option value="Sherry|supervisor">Sherry</option>
+        <option value="Nikkieta|supervisor">Nikkieta</option>
+        <option value="Abby|supervisor">Abby</option>
+        <option value="Meghan|supervisor">Meghan</option>
+      </optgroup>
+    </select>
+    <input class="login-input" type="password" id="login-pin" placeholder="Enter your PIN" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Start My Shift →</button>
+    <hr class="login-divider">
+    <p style="font-size:11px;color:var(--text-light);">Default PIN for everyone: <strong>1234</strong><br>Ask Nikkieta or Sherry to change your PIN.</p>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<!-- APP -->
+<div id="app">
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">🐾</div>
+      <h1>ATR Front Desk</h1>
+    </div>
+    <div class="header-right">
+      <span class="header-date" id="hdr-date"></span>
+      <div class="user-badge">
+        <span id="hdr-user"></span>
+        <span class="role-chip" id="hdr-role"></span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">End Shift</button>
+    </div>
+  </header>
+
+  <!-- NAV -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="showSection('checklist')">Checklist</button>
+    <button class="nav-tab supervisor-tab" onclick="showSection('reports')" style="display:none">Reports</button>
+    <button class="nav-tab supervisor-tab" onclick="showSection('settings')" style="display:none">Settings</button>
+  </div>
+
+  <!-- ══ DASHBOARD SECTION ══ -->
+  <div class="section active" id="sec-dashboard">
+
+    <!-- SHIFT UPDATES -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="dot" style="background:var(--melon)"></span>
+          Shift Updates
+          <span class="count-badge" id="unread-badge" style="display:none"></span>
+        </span>
+        <div class="card-actions supervisor-el" style="display:none">
+          <select class="f-select" id="upd-type" style="font-size:12px;padding:6px 10px;">
+            <option value="important">🔴 Important</option>
+            <option value="info" selected>🔵 Info</option>
+          </select>
+          <textarea class="f-textarea" id="upd-text" placeholder="What should the team know?" style="min-height:44px;margin:0;flex:1;min-width:200px;"></textarea>
+          <button class="btn btn-primary" onclick="postUpdate()">Post Update</button>
+        </div>
+      </div>
+      <div class="card-body" id="updates-list">
+        <div class="empty"><div class="icon">📋</div>No updates yet.</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- DOGS -->
+      <div class="card col-full">
+        <div class="card-header">
+          <span class="card-title"><span class="dot" style="background:var(--teal)"></span>Dogs — Requirements at a Glance</span>
+          <div class="card-actions supervisor-el" style="display:none">
+            <input class="f-input" id="dog-name" placeholder="Dog name" style="max-width:120px">
+            <input class="f-input" id="dog-tier" placeholder="Tier / stop color" style="max-width:140px">
+            <input class="f-input" id="dog-reqs" placeholder="Requirements (comma separated)" style="min-width:200px">
+            <button class="btn btn-primary" onclick="addDog()">+ Add Dog</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="dogs-grid" id="dogs-grid">
+            <div class="empty" style="grid-column:1/-1"><div class="icon">🐕</div>No dogs added yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPOINTMENTS -->
+      <div class="card col-full">
+        <div class="card-header">
+          <span class="card-title"><span class="dot" style="background:var(--yellow)"></span>Today's Appointments</span>
+          <div class="card-actions">
+            <button class="btn btn-ghost" id="acuity-btn" onclick="openAcuity()" style="display:none">📅 Open Acuity →</button>
+            <div class="supervisor-el" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;" id="appt-form-inline">
+              <input class="f-input" id="ap-time" placeholder="Time (e.g. 2:00 PM)" style="max-width:120px">
+              <input class="f-input" id="ap-dog" placeholder="Dog" style="max-width:110px">
+              <input class="f-input" id="ap-adopter" placeholder="Adopter" style="max-width:130px">
+              <input class="f-input" id="ap-handler" placeholder="Handler" style="max-width:110px">
+              <button class="btn btn-primary" onclick="addAppt()">+ Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body" id="appt-list">
+          <div class="empty"><div class="icon">📅</div>No appointments logged today.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CHECKLIST SECTION ══ -->
+  <div class="section" id="sec-checklist">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="dot" style="background:var(--green)"></span>Team Checklist</span>
+        <div class="card-actions">
+          <button class="cl-tab active" id="tab-daily" onclick="switchTab('daily')">Daily</button>
+          <button class="cl-tab" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
+          <button class="cl-tab" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="prog-label">0 / 0 complete</span>
+          <span id="reset-label" style="font-style:italic;font-size:11px;"></span>
+        </div>
+        <div class="progress-bg"><div class="progress-fill" id="prog-bar" style="width:0%"></div></div>
+      </div>
+      <div class="cl-body" id="cl-body"><div class="empty"><div class="icon">⏳</div>Loading…</div></div>
+
+      <!-- ASSIGN TASK (supervisor) -->
+      <div class="form-panel supervisor-el" style="display:none">
+        <div class="form-row" style="align-items:center;margin-bottom:6px;">
+          <span class="form-label">Assign task:</span>
+          <select class="f-select" id="assign-who" style="flex:1;max-width:160px;">
+            <option value="">— Select —</option>
+            <option value="ALL">Whole Team</option>
+            <option value="Maya">Maya</option>
+            <option value="Kelyn">Kelyn</option>
+            <option value="Natalie">Natalie</option>
+            <option value="Caitlin">Caitlin</option>
+            <option value="Kyle">Kyle</option>
+            <option value="Kadi">Kadi</option>
+            <option value="Courtney">Courtney</option>
+            <option value="Serena">Serena</option>
+          </select>
+          <select class="f-select" id="assign-tab" style="max-width:110px;">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <input class="f-input" id="assign-task" placeholder="Task description…" style="flex:2;min-width:180px;">
+          <button class="btn btn-green" onclick="assignTask()">Assign</button>
+        </div>
+      </div>
+
+      <div style="padding:0 18px 14px;">
+        <div class="add-task-row">
+          <input class="add-task-input" id="new-task-input" placeholder="Add a task to the shared list…" onkeydown="if(event.key==='Enter')addMyTask()">
+          <button class="btn btn-green" onclick="addMyTask()">+ Add</button>
+        </div>
+      </div>
+      <div class="reset-note" id="reset-note"></div>
+    </div>
+  </div>
+
+  <!-- ══ REPORTS SECTION ══ -->
+  <div class="section" id="sec-reports">
+    <div class="report-filters">
+      <span class="form-label">Date range:</span>
+      <select class="f-select" id="rpt-type" onchange="renderReport()">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="custom">Custom range</option>
+      </select>
+      <input type="date" class="f-input" id="rpt-from" style="max-width:150px;display:none" onchange="renderReport()">
+      <span id="rpt-to-label" style="display:none;font-size:13px;color:var(--text-light);">to</span>
+      <input type="date" class="f-input" id="rpt-to" style="max-width:150px;display:none" onchange="renderReport()">
+      <select class="f-select" id="rpt-tab" onchange="renderReport()">
+        <option value="daily">Daily tasks</option>
+        <option value="weekly">Weekly tasks</option>
+        <option value="monthly">Monthly tasks</option>
+      </select>
+      <button class="btn btn-ghost" onclick="exportReport()">⬇ Export CSV</button>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stat-grid" id="rpt-stats"></div>
+
+    <!-- BY EMPLOYEE -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title"><span class="dot" style="background:var(--teal)"></span>Completion by Employee</span></div>
+      <div class="card-body"><div id="rpt-by-employee"><div class="empty">Loading…</div></div></div>
+    </div>
+
+    <!-- BY TASK -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title"><span class="dot" style="background:var(--green)"></span>Completion by Task</span></div>
+      <div class="card-body"><div id="rpt-by-task"><div class="empty">Loading…</div></div></div>
+    </div>
+
+    <!-- FULL LOG -->
+    <div class="card">
+      <div class="card-header"><span class="card-title"><span class="dot" style="background:var(--muttro)"></span>Full Completion Log</span></div>
+      <div class="card-body" style="overflow-x:auto;"><div id="rpt-log"><div class="empty">Loading…</div></div></div>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS SECTION ══ -->
+  <div class="section" id="sec-settings">
+    <div class="card" style="max-width:600px;">
+      <div class="card-header"><span class="card-title"><span class="dot" style="background:var(--grey)"></span>Acuity Scheduling URL</span></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">Paste your Acuity Scheduling page URL below. An "Open Acuity" button will appear on the dashboard for all staff.</p>
+        <div class="form-row">
+          <input class="f-input" id="acuity-url-input" placeholder="https://yourorg.acuityscheduling.com/…">
+          <button class="btn btn-primary" onclick="saveAcuityUrl()">Save</button>
+        </div>
+        <div id="acuity-saved-note" style="font-size:12px;color:var(--green-dark);margin-top:8px;display:none;">✓ Saved! Button will appear on the dashboard.</div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:600px;margin-top:16px;">
+      <div class="card-header"><span class="card-title"><span class="dot" style="background:var(--grey)"></span>PIN Management</span></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text-light);margin-bottom:14px;">Change a staff member's PIN. Default PIN for all new users is <strong>1234</strong>.</p>
+        <div class="form-row">
+          <select class="f-select" id="pin-who" style="flex:1">
+            <option value="">— Select staff member —</option>
+            <option>Maya</option><option>Kelyn</option><option>Natalie</option><option>Caitlin</option>
+            <option>Kyle</option><option>Kadi</option><option>Courtney</option><option>Serena</option>
+            <option>Sadie</option><option>Sherry</option><option>Nikkieta</option><option>Abby</option><option>Meghan</option>
+          </select>
+          <input class="f-input" type="password" id="pin-new" placeholder="New PIN (4–8 digits)" style="max-width:180px;">
+          <button class="btn btn-primary" onclick="savePin()">Update PIN</button>
+        </div>
+        <div id="pin-saved-note" style="font-size:12px;color:var(--green-dark);margin-top:8px;display:none;">✓ PIN updated.</div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:600px;margin-top:16px;">
+      <div class="card-header"><span class="card-title"><span class="dot" style="background:var(--melon)"></span>Clear Today's Appointments</span></div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">Appointments auto-clear each day, but you can manually clear them here.</p>
+        <button class="btn btn-melon" onclick="clearAppts()">Clear Today's Appointments</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const ALL_STAFF = ['Maya','Kelyn','Natalie','Caitlin','Kyle','Kadi','Courtney','Serena'];
+const DEFAULT_PINS = {}; // all default to '1234', stored per-user
+
+const DEFAULT_TASKS = {
+  daily:[
+    'Review shift updates',
+    'Check emails & Google Voice messages',
+    'Kennel walkthrough — check kennel cards',
+    'Water jugs',
+    'Bathroom check (opening)',
+    'Review passdown from previous shift',
+    'Check adoption confirmation texts',
+    'Profile checks',
+  ],
+  weekly:[
+    'Inventory check',
+    'Pupper Media (photos)',
+    'FDR slideshow update',
+    'Bank run (Tuesdays)',
+    'Deep clean front desk area',
+    'Update foster report card binder',
+    'Submit timecard',
+  ],
+  monthly:[
+    'Full inventory audit',
+    'Review updated SOPs',
+    'Canine Corner stock check',
+    'Go-home folder supplies check',
+    'Update kennel card binder',
+  ]
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let CU=null, CR=null, CT='daily';
+
+// ─── DATE ────────────────────────────────────────────────────────────────────
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const weekStart=()=>{const d=new Date();d.setDate(d.getDate()-d.getDay());return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+const monthStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+const resetKey=t=>t==='daily'?todayStr():t==='weekly'?weekStart():monthStr();
+const resetLabel=t=>t==='daily'?'Resets each day':t==='weekly'?'Resets each Monday':'Resets each month';
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+async function sav(key,val,shared=false){try{await window.storage.set(key,JSON.stringify(val),shared);}catch(e){}}
+async function lod(key,shared=false){try{const r=await window.storage.get(key,shared);return r?JSON.parse(r.value):null;}catch(e){return null;}}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+async function doLogin(){
+  const sel=document.getElementById('login-sel').value;
+  if(!sel){showErr('Please select your name.');return;}
+  const pin=document.getElementById('login-pin').value.trim();
+  const [name,role]=sel.split('|');
+  // Load stored pin or default to 1234
+  const storedPin=await lod(`pin:${name}`,true)||'1234';
+  if(pin!==storedPin){showErr('Incorrect PIN — try again.');return;}
+  CU=name;CR=role;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('hdr-user').textContent=CU;
+  document.getElementById('hdr-role').textContent=CR==='supervisor'?'Supervisor':'FDR';
+  document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-pin').value='';
+  if(CR==='supervisor'){
+    document.querySelectorAll('.supervisor-el').forEach(el=>el.style.display='flex');
+    document.querySelectorAll('.supervisor-tab').forEach(el=>el.style.display='');
+  }
+  loadAll();
+}
+
+function showErr(msg){const el=document.getElementById('login-err');el.textContent=msg;el.style.display='block';}
+
+function doLogout(){
+  CU=null;CR=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-sel').value='';
+  document.querySelectorAll('.supervisor-el').forEach(el=>el.style.display='none');
+  document.querySelectorAll('.supervisor-tab').forEach(el=>el.style.display='none');
+  showSection('dashboard');
+}
+
+// ─── SECTION NAV ─────────────────────────────────────────────────────────────
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`sec-${id}`).classList.add('active');
+  event&&event.target&&event.target.classList.add('active');
+  if(id==='reports')renderReport();
+  if(id==='settings')loadSettings();
+}
+
+// ─── LOAD ALL ─────────────────────────────────────────────────────────────────
+async function loadAll(){
+  await loadUpdates();
+  await loadDogs();
+  await loadAppts();
+  await renderChecklist();
+  loadAcuityBtn();
+}
+
+// ─── UPDATES ─────────────────────────────────────────────────────────────────
+async function loadUpdates(){
+  const updates=(await lod('fdr:updates',true))||[];
+  const readSet=(await lod(`fdr:read:${CU}`,false))||{};
+  renderUpdates(updates,readSet);
+}
+
+function renderUpdates(updates,readSet){
+  const el=document.getElementById('updates-list');
+  const badge=document.getElementById('unread-badge');
+  if(!updates.length){el.innerHTML='<div class="empty"><div class="icon">📋</div>No updates yet.</div>';badge.style.display='none';return;}
+  const unread=updates.filter(u=>!readSet[u.id]).length;
+  badge.style.display=unread?'':'none';
+  if(unread)badge.textContent=unread+' new';
+  el.innerHTML=[...updates].reverse().map(u=>{
+    const read=!!readSet[u.id];
+    const del=CR==='supervisor'?`<button class="btn-danger" onclick="deleteUpdate('${u.id}')">×</button>`:'';
+    return `<div class="update-item">
+      <span class="unread-dot ${read?'seen':''}"></span>
+      <span class="badge badge-${u.type}">${u.type==='important'?'🔴 Important':'🔵 Info'}</span>
+      <div class="update-content">
+        <div class="update-text">${esc(u.text)}</div>
+        <div class="update-meta"><span class="update-author">${esc(u.author)}</span><span class="update-time">${u.time}</span></div>
+      </div>
+      <button class="read-btn ${read?'done':''}" onclick="markRead('${u.id}')">${read?'✓ Read':'Mark read'}</button>
+      ${del}
+    </div>`;
+  }).join('');
+}
+
+async function postUpdate(){
+  const text=document.getElementById('upd-text').value.trim();
+  if(!text)return;
+  const type=document.getElementById('upd-type').value;
+  const updates=(await lod('fdr:updates',true))||[];
+  updates.push({id:Date.now().toString(),text,type,author:CU,time:new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})});
+  await sav('fdr:updates',updates,true);
+  document.getElementById('upd-text').value='';
+  const readSet=(await lod(`fdr:read:${CU}`,false))||{};
+  renderUpdates(updates,readSet);
+  notif('Update posted!');
+}
+
+async function markRead(id){
+  const readSet=(await lod(`fdr:read:${CU}`,false))||{};
+  readSet[id]=true;
+  await sav(`fdr:read:${CU}`,readSet,false);
+  const updates=(await lod('fdr:updates',true))||[];
+  renderUpdates(updates,readSet);
+}
+
+async function deleteUpdate(id){
+  let updates=(await lod('fdr:updates',true))||[];
+  updates=updates.filter(u=>u.id!==id);
+  await sav('fdr:updates',updates,true);
+  const readSet=(await lod(`fdr:read:${CU}`,false))||{};
+  renderUpdates(updates,readSet);
+}
+
+// ─── DOGS ─────────────────────────────────────────────────────────────────────
+async function loadDogs(){
+  const dogs=(await lod('fdr:dogs',true))||[];
+  renderDogs(dogs);
+}
+
+function renderDogs(dogs){
+  const grid=document.getElementById('dogs-grid');
+  if(!dogs.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="icon">🐕</div>No dogs added yet.</div>';return;}
+  grid.innerHTML=dogs.map(d=>{
+    const reqs=(d.reqs||'').split(',').map(r=>r.trim()).filter(Boolean);
+    const tags=reqs.map(r=>{
+      const low=r.toLowerCase();
+      const cls=low.includes('dog intro')||low.includes('intro required')?'req-purple':low.includes('kids')||low.includes('waiver')||low.includes('fearful')||low.includes('shy')?'req-orange':'req-green';
+      return `<span class="req-tag ${cls}">${esc(r)}</span>`;
+    }).join('');
+    const del=CR==='supervisor'?`<button class="dog-del" onclick="deleteDog('${d.id}')">×</button>`:'';
+    return `<div class="dog-card">${del}<div class="dog-name">${esc(d.name)}</div><div class="dog-tier">${esc(d.tier)}</div><div class="dog-reqs">${tags||'<span style="color:var(--text-light);font-size:11px">No special reqs</span>'}</div></div>`;
+  }).join('');
+}
+
+async function addDog(){
+  const name=document.getElementById('dog-name').value.trim();
+  if(!name)return;
+  const dogs=(await lod('fdr:dogs',true))||[];
+  dogs.push({id:Date.now().toString(),name,tier:document.getElementById('dog-tier').value.trim(),reqs:document.getElementById('dog-reqs').value.trim()});
+  await sav('fdr:dogs',dogs,true);
+  ['dog-name','dog-tier','dog-reqs'].forEach(id=>document.getElementById(id).value='');
+  renderDogs(dogs);notif('Dog added!');
+}
+
+async function deleteDog(id){
+  let dogs=(await lod('fdr:dogs',true))||[];
+  dogs=dogs.filter(d=>d.id!==id);
+  await sav('fdr:dogs',dogs,true);renderDogs(dogs);
+}
+
+// ─── APPOINTMENTS ─────────────────────────────────────────────────────────────
+async function loadAppts(){
+  let all=(await lod('fdr:appts',true))||[];
+  const td=todayStr();
+  all=all.filter(a=>a.day===td);
+  await sav('fdr:appts',all,true);
+  renderAppts(all);
+}
+
+function renderAppts(appts){
+  const el=document.getElementById('appt-list');
+  if(!appts.length){el.innerHTML='<div class="empty"><div class="icon">📅</div>No appointments logged today.</div>';return;}
+  const sorted=[...appts].sort((a,b)=>a.time.localeCompare(b.time));
+  el.innerHTML=sorted.map(a=>{
+    const del=CR==='supervisor'?`<button class="btn-danger" onclick="deleteAppt('${a.id}')">×</button>`:'';
+    return `<div class="appt-item">
+      <span class="appt-time">${esc(a.time)}</span>
+      <div class="appt-info"><div class="appt-dog">${esc(a.dog)}</div><div class="appt-adopter">${esc(a.adopter)}</div></div>
+      <span class="appt-handler">${esc(a.handler)}</span>${del}
+    </div>`;
+  }).join('');
+}
+
+async function addAppt(){
+  const time=document.getElementById('ap-time').value.trim(),dog=document.getElementById('ap-dog').value.trim();
+  if(!time||!dog)return;
+  const all=(await lod('fdr:appts',true))||[];
+  all.push({id:Date.now().toString(),day:todayStr(),time,dog,adopter:document.getElementById('ap-adopter').value.trim(),handler:document.getElementById('ap-handler').value.trim()});
+  await sav('fdr:appts',all,true);
+  ['ap-time','ap-dog','ap-adopter','ap-handler'].forEach(id=>document.getElementById(id).value='');
+  renderAppts(all);notif('Appointment added!');
+}
+
+async function deleteAppt(id){
+  let all=(await lod('fdr:appts',true))||[];
+  all=all.filter(a=>a.id!==id);
+  await sav('fdr:appts',all,true);renderAppts(all);
+}
+
+async function clearAppts(){
+  await sav('fdr:appts',[],true);
+  renderAppts([]);notif('Appointments cleared.');
+}
+
+// ─── ACUITY ───────────────────────────────────────────────────────────────────
+function loadAcuityBtn(){
+  const url=localStorage.getItem('fdr:acuityurl')||'';
+  const btn=document.getElementById('acuity-btn');
+  if(url){btn.style.display='';btn.setAttribute('data-url',url);}
+  else btn.style.display='none';
+}
+
+function openAcuity(){
+  const url=localStorage.getItem('fdr:acuityurl')||'';
+  if(url)window.open(url,'_blank');
+}
+
+function saveAcuityUrl(){
+  const url=document.getElementById('acuity-url-input').value.trim();
+  localStorage.setItem('fdr:acuityurl',url);
+  document.getElementById('acuity-saved-note').style.display='block';
+  loadAcuityBtn();
+  setTimeout(()=>document.getElementById('acuity-saved-note').style.display='none',3000);
+}
+
+function loadSettings(){
+  document.getElementById('acuity-url-input').value=localStorage.getItem('fdr:acuityurl')||'';
+}
+
+// ─── CHECKLIST ────────────────────────────────────────────────────────────────
+// Shared storage key: fdr:cl:{tab}:{resetKey}
+// Each task: { id, label, done, doneBy, doneAt, assignedTo }
+// History log: fdr:cllog — array of completion events for reporting
+
+function switchTab(t){
+  CT=t;
+  ['daily','weekly','monthly'].forEach(x=>{
+    const el=document.getElementById(`tab-${x}`);
+    if(el)el.classList.toggle('active',x===t);
+  });
+  renderChecklist();
+}
+
+async function getClKey(){return `fdr:cl:${CT}:${resetKey(CT)}`;}
+
+async function getClData(){
+  const key=await getClKey();
+  let data=await lod(key,true);
+  if(!data){
+    data={tasks:DEFAULT_TASKS[CT].map((l,i)=>({id:`def-${CT}-${i}`,label:l,done:false,doneBy:null,doneAt:null,assignedTo:'ALL'}))};
+    await sav(key,data,true);
+  }
+  return data;
+}
+
+async function saveClData(data){
+  const key=await getClKey();
+  await sav(key,data,true);
+}
+
+async function renderChecklist(){
+  const data=await getClData();
+  const tasks=data.tasks;
+  const visible=tasks.filter(t=>t.assignedTo==='ALL'||t.assignedTo===CU);
+  const done=visible.filter(t=>t.done).length;
+  const pct=visible.length?Math.round(done/visible.length*100):0;
+
+  document.getElementById('prog-label').textContent=`${done} / ${visible.length} complete`;
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('reset-label').textContent=resetLabel(CT);
+  document.getElementById('reset-note').textContent=resetLabel(CT);
+
+  const team=visible.filter(t=>t.assignedTo==='ALL');
+  const mine=visible.filter(t=>t.assignedTo===CU);
+
+  function renderItems(items){
+    if(!items.length)return '';
+    return items.map(t=>{
+      const whoChip=t.done&&t.doneBy?`<span class="cl-who">✓ ${esc(t.doneBy)}</span>`:'';
+      const assignChip=t.assignedTo!=='ALL'?`<span class="cl-assigned-chip">→ ${esc(t.assignedTo)}</span>`:'';
+      const canDel=CR==='supervisor'||(t.assignedTo===CU&&t.assignedTo!=='ALL');
+      const delBtn=canDel?`<button class="btn-danger" onclick="deleteClTask('${t.id}')">×</button>`:'';
+      return `<div class="cl-item">
+        <div class="cl-check ${t.done?'checked':''}" data-id="${t.id}" onclick="toggleClTask('${t.id}')"></div>
+        <span class="cl-label ${t.done?'done':''}" onclick="toggleClTask('${t.id}')">${esc(t.label)}</span>
+        ${assignChip}${whoChip}${delBtn}
+      </div>`;
+    }).join('');
+  }
+
+  let html='';
+  if(team.length){
+    if(mine.length)html+=`<div class="cl-section-title">👥 Team Tasks</div>`;
+    html+=renderItems(team);
+  }
+  if(mine.length){
+    html+=`<div class="cl-section-title" style="margin-top:14px;">📌 Assigned to Me</div>`;
+    html+=renderItems(mine);
+  }
+  if(!visible.length)html='<div class="empty"><div class="icon">✅</div>No tasks yet.</div>';
+
+  document.getElementById('cl-body').innerHTML=html;
+}
+
+async function toggleClTask(id){
+  const data=await getClData();
+  const task=data.tasks.find(t=>t.id===id);
+  if(!task)return;
+  const wasChecked=task.done;
+  task.done=!wasChecked;
+  task.doneBy=task.done?CU:null;
+  task.doneAt=task.done?new Date().toISOString():null;
+  await saveClData(data);
+
+  // Log completion for reports
+  if(task.done){
+    const log=(await lod('fdr:cllog',true))||[];
+    log.push({
+      tab:CT,period:resetKey(CT),taskId:task.id,taskLabel:task.label,
+      doneBy:CU,doneAt:task.doneAt,date:todayStr()
+    });
+    // Keep last 365 entries max
+    if(log.length>365)log.splice(0,log.length-365);
+    await sav('fdr:cllog',log,true);
+  }
+  await renderChecklist();
+}
+
+async function deleteClTask(id){
+  const data=await getClData();
+  data.tasks=data.tasks.filter(t=>t.id!==id);
+  await saveClData(data);
+  await renderChecklist();
+}
+
+async function addMyTask(){
+  const input=document.getElementById('new-task-input');
+  const label=input.value.trim();
+  if(!label)return;
+  const data=await getClData();
+  data.tasks.push({id:Date.now().toString(),label,done:false,doneBy:null,doneAt:null,assignedTo:'ALL'});
+  await saveClData(data);
+  input.value='';
+  await renderChecklist();
+  notif('Task added!');
+}
+
+async function assignTask(){
+  const who=document.getElementById('assign-who').value;
+  const tab=document.getElementById('assign-tab').value;
+  const label=document.getElementById('assign-task').value.trim();
+  if(!who||!label)return;
+  // Save to that tab's current period
+  const key=`fdr:cl:${tab}:${resetKey(tab)}`;
+  let data=await lod(key,true);
+  if(!data){data={tasks:DEFAULT_TASKS[tab].map((l,i)=>({id:`def-${tab}-${i}`,label:l,done:false,doneBy:null,doneAt:null,assignedTo:'ALL'}))};}
+  data.tasks.push({id:Date.now().toString(),label,done:false,doneBy:null,doneAt:null,assignedTo:who});
+  await sav(key,data,true);
+  document.getElementById('assign-task').value='';
+  if(tab===CT)await renderChecklist();
+  notif(`Task assigned to ${who==='ALL'?'whole team':who}!`);
+}
+
+// ─── REPORTS ─────────────────────────────────────────────────────────────────
+async function renderReport(){
+  const rptType=document.getElementById('rpt-type').value;
+  const rptTab=document.getElementById('rpt-tab').value;
+  const fromEl=document.getElementById('rpt-from');
+  const toEl=document.getElementById('rpt-to');
+  const toLabel=document.getElementById('rpt-to-label');
+
+  if(rptType==='custom'){fromEl.style.display=toLabel.style.display=toEl.style.display='';}
+  else{fromEl.style.display=toLabel.style.display=toEl.style.display='none';}
+
+  const log=(await lod('fdr:cllog',true))||[];
+
+  // Filter by date range
+  let fromDate,toDate;
+  const today=new Date();
+  if(rptType==='7'){fromDate=new Date(today);fromDate.setDate(today.getDate()-7);}
+  else if(rptType==='30'){fromDate=new Date(today);fromDate.setDate(today.getDate()-30);}
+  else{
+    fromDate=fromEl.value?new Date(fromEl.value):new Date(0);
+    toDate=toEl.value?new Date(toEl.value):new Date();
+  }
+  if(!toDate)toDate=new Date();
+
+  const filtered=log.filter(e=>{
+    if(e.tab!==rptTab)return false;
+    const d=new Date(e.date);
+    return d>=fromDate&&d<=toDate;
+  });
+
+  // ── STATS ──
+  const totalCompletions=filtered.length;
+  const uniqueStaff=[...new Set(filtered.map(e=>e.doneBy))];
+  const uniqueTasks=[...new Set(filtered.map(e=>e.taskLabel))];
+  const daysInRange=Math.max(1,Math.round((toDate-fromDate)/(1000*60*60*24)));
+
+  document.getElementById('rpt-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-num" style="color:var(--teal)">${totalCompletions}</div><div class="stat-label">Total completions</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green-dark)">${uniqueStaff.length}</div><div class="stat-label">Staff active</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--muttro)">${uniqueTasks.length}</div><div class="stat-label">Unique tasks completed</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--melon)">${daysInRange}</div><div class="stat-label">Days in range</div></div>
+  `;
+
+  // ── BY EMPLOYEE ──
+  const byEmp={};
+  ALL_STAFF.forEach(s=>byEmp[s]=0);
+  filtered.forEach(e=>{if(byEmp[e.doneBy]!==undefined)byEmp[e.doneBy]++;else byEmp[e.doneBy]=(byEmp[e.doneBy]||0)+1;});
+  const maxEmp=Math.max(1,...Object.values(byEmp));
+  const empHtml=Object.entries(byEmp).sort((a,b)=>b[1]-a[1]).map(([name,cnt])=>{
+    const pct=Math.round(cnt/Math.max(1,totalCompletions/Math.max(1,uniqueStaff.length))*100);
+    const barPct=Math.round(cnt/maxEmp*100);
+    const cls=barPct>60?'good':barPct>30?'warn':'bad';
+    return `<tr>
+      <td style="font-weight:500">${esc(name)}</td>
+      <td>${cnt}</td>
+      <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill ${cls}" style="width:${barPct}%;background:${barPct>60?'var(--green)':barPct>30?'var(--yellow)':'var(--melon)'}"></div></div><span class="pct-label">${barPct}%</span></div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rpt-by-employee').innerHTML=empHtml?`<table class="report-table"><thead><tr><th>Employee</th><th>Completions</th><th>Relative %</th></tr></thead><tbody>${empHtml}</tbody></table>`:'<div class="empty">No data for this period.</div>';
+
+  // ── BY TASK ──
+  const byTask={};
+  filtered.forEach(e=>{byTask[e.taskLabel]=(byTask[e.taskLabel]||0)+1;});
+  const maxTask=Math.max(1,...Object.values(byTask));
+  const taskHtml=Object.entries(byTask).sort((a,b)=>b[1]-a[1]).map(([label,cnt])=>{
+    const barPct=Math.round(cnt/maxTask*100);
+    return `<tr>
+      <td>${esc(label)}</td>
+      <td>${cnt}</td>
+      <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${barPct}%;background:var(--teal)"></div></div><span class="pct-label">${barPct}%</span></div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rpt-by-task').innerHTML=taskHtml?`<table class="report-table"><thead><tr><th>Task</th><th>Times completed</th><th>Frequency</th></tr></thead><tbody>${taskHtml}</tbody></table>`:'<div class="empty">No data for this period.</div>';
+
+  // ── FULL LOG ──
+  const logHtml=[...filtered].reverse().map(e=>`<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:11px">${e.date}</td>
+    <td style="font-weight:500">${esc(e.doneBy)}</td>
+    <td>${esc(e.taskLabel)}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-light)">${e.tab}</td>
+  </tr>`).join('');
+  document.getElementById('rpt-log').innerHTML=logHtml?`<table class="report-table"><thead><tr><th>Date</th><th>Completed by</th><th>Task</th><th>List</th></tr></thead><tbody>${logHtml}</tbody></table>`:'<div class="empty">No completions logged in this range.</div>';
+}
+
+function exportReport(){
+  lod('fdr:cllog',true).then(log=>{
+    if(!log||!log.length){notif('No data to export.');return;}
+    const rows=[['Date','Employee','Task','List','Period'],...log.map(e=>[e.date,e.doneBy,e.taskLabel,e.tab,e.period])];
+    const csv=rows.map(r=>r.map(c=>`"${(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    a.download=`ATR_Checklist_Report_${todayStr()}.csv`;
+    a.click();
+  });
+}
+
+// ─── PIN MANAGEMENT ───────────────────────────────────────────────────────────
+async function savePin(){
+  const who=document.getElementById('pin-who').value;
+  const pin=document.getElementById('pin-new').value.trim();
+  if(!who||!pin||pin.length<4){notif('Please select a staff member and enter a PIN (min 4 digits).');return;}
+  await sav(`pin:${who}`,pin,true);
+  document.getElementById('pin-new').value='';
+  document.getElementById('pin-saved-note').style.display='block';
+  setTimeout(()=>document.getElementById('pin-saved-note').style.display='none',3000);
+  notif(`PIN updated for ${who}.`);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function notif(msg){const el=document.getElementById('notif');el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',2800);}
+
+// Custom date range toggle
+document.addEventListener('DOMContentLoaded',()=>{
+  const sel=document.getElementById('rpt-type');
+  if(sel)sel.addEventListener('change',()=>{
+    const custom=sel.value==='custom';
+    ['rpt-from','rpt-to','rpt-to-label'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.display=custom?'':'none';
+    });
+  });
+});
+</script>
+</body>
+</html>
